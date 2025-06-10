@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Car Learning System</title>
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #333;
+            background-color: white;
+            margin: 20px;
+        }
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button id="clearBtn">Clear Canvas</button>
+        <button id="startBtn">Start Learning</button>
+        <button id="resetBtn">Reset Car</button>
+        <div>
+            <label>Drawing Mode:</label>
+            <select id="drawMode">
+                <option value="boundary">Draw Boundary</option>
+                <option value="start">Set Start Point</option>
+                <option value="end">Set End Point</option>
+            </select>
+        </div>
+    </div>
+    <div class="status">
+        <div>Generation: <span id="generation">0</span></div>
+        <div>Fitness: <span id="fitness">0</span></div>
+        <div>Status: <span id="status">Ready</span></div>
+    </div>
+    <canvas id="roadCanvas"></canvas>
+    <script src="car.js"></script>
+    <script src="road.js"></script>
+    <script src="ai.js"></script>
+    <script src="main.js"></script>
+</body>
+</html> 
