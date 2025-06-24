@@ -63,7 +63,6 @@ class AI {
         const sensorReadings = car.sense(road);
         const angleToGoal = this.getAngleToGoal(car, road);
         const distanceToGoal = this.getDistanceToGoal(car, road);
-        
         return [...sensorReadings, angleToGoal, distanceToGoal];
     }
 
@@ -85,7 +84,6 @@ class AI {
     // Calculate distance to goal
     getDistanceToGoal(car, road) {
         if (!road.endPoint) return 0;
-        
         const dx = road.endPoint.x - car.x;
         const dy = road.endPoint.y - car.y;
         return Math.sqrt(dx * dx + dy * dy);

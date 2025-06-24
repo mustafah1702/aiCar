@@ -13,7 +13,9 @@ const ai = new AI();
 
 // Game state
 let isDrawing = false;
-let currentBoundary = 'left';
+let isDrawingBlockage = false;
+let lastX = 0;
+let lastY = 0;
 let isLearning = false;
 let generation = 0;
 let fitness = 0;
@@ -44,13 +46,14 @@ clearBtn.addEventListener('click', () => {
 });
 
 startBtn.addEventListener('click', () => {
-    if (!road.startPoint || !road.endPoint || road.leftBoundary.length < 2 || road.rightBoundary.length < 2) {
-        alert('Please draw the road boundaries and set start/end points first!');
+    if (!road.startPoint || !road.endPoint) {
+        alert('Please set start and end points first!');
         return;
     }
     
     if (!car) {
         car = new Car(road.startPoint.x, road.startPoint.y);
+        console.log('Car created at:', car.x, car.y);
     }
     
     isLearning = true;
@@ -72,12 +75,10 @@ function startDrawing(e) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    if (drawMode.value === 'boundary') {
-        if (currentBoundary === 'left') {
-            road.addLeftPoint(x, y);
-        } else {
-            road.addRightPoint(x, y);
-        }
+    if (drawMode.value === 'blockage') {
+        isDrawingBlockage = true;
+        lastX = x;
+        lastY = y;
     } else if (drawMode.value === 'start') {
         road.setStartPoint(x, y);
     } else if (drawMode.value === 'end') {
@@ -92,31 +93,67 @@ function draw(e) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    if (drawMode.value === 'boundary') {
-        if (currentBoundary === 'left') {
-            road.addLeftPoint(x, y);
-        } else {
-            road.addRightPoint(x, y);
+    if (drawMode.value === 'blockage' && isDrawingBlockage) {
+        // Draw a preview line while dragging
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        road.draw(ctx);
+        
+        // Redraw car if it exists
+        if (car) {
+            car.draw(ctx);
         }
+        
+        ctx.strokeStyle = '#e74c3c';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
     }
 }
 
-function stopDrawing() {
-    isDrawing = false;
-    if (drawMode.value === 'boundary') {
-        currentBoundary = currentBoundary === 'left' ? 'right' : 'left';
+function stopDrawing(e) {
+    if (!isDrawing) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    if (drawMode.value === 'blockage' && isDrawingBlockage) {
+        // Add the blockage line
+        road.addBlockageLine(lastX, lastY, x, y);
+        isDrawingBlockage = false;
+        
+        // Redraw everything after adding blockage line
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        road.draw(ctx);
+        if (car) {
+            car.draw(ctx);
+        }
     }
+    
+    isDrawing = false;
 }
 
 // Game loop
 async function gameLoop() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Only calculate distance if car exists
+    const prevDistance = car ? ai.getDistanceToGoal(car, road) : 0;
+
     
     // Draw road
     road.draw(ctx);
     
     if (car) {
+        if (
+            car.x < 0 || car.x > canvas.width ||
+            car.y < 0 || car.y > canvas.height
+        ) {
+            console.log('Car is off-canvas:', car.x, car.y);
+        }
+        
         // Get current state
         const state = ai.getState(car, road);
         
@@ -134,6 +171,7 @@ async function gameLoop() {
             
             // Update car position
             car.update();
+            console.log('Car moved to:', car.x, car.y, 'speed:', car.speed);
             
             // Calculate reward
             let reward = 0;
@@ -148,24 +186,26 @@ async function gameLoop() {
                 if (distance < 10) {
                     reward = 1000;
                     done = true;
-                    generation++;
-                    updateUI();
                 }
             }
             
-            // Check if car is off road
-            if (road.isPointOutsideRoad(car.x, car.y)) {
+            // Check if car hits blockage
+            if (road.isPointOnBlockage(car.x, car.y)) {
+                console.log('Car hit blockage at:', car.x, car.y);
+                reward = -100;
+                done = true;
+            }
+
+            // Check if car leaves the canvas
+            if (car.x < 0 || car.x > canvas.width || car.y < 0 || car.y > canvas.height) {
+                console.log('Car left canvas at:', car.x, car.y);
                 reward = -100;
                 done = true;
             }
             
             // Reward for moving towards goal
             if (!done) {
-                const prevDistance = ai.getDistanceToGoal(car, road);
-                const newDistance = Math.sqrt(
-                    Math.pow(road.endPoint.x - car.x, 2) +
-                    Math.pow(road.endPoint.y - car.y, 2)
-                );
+                const newDistance = ai.getDistanceToGoal(car, road);
                 reward = prevDistance - newDistance;
             }
             
@@ -185,13 +225,31 @@ async function gameLoop() {
             
             // Reset car if done
             if (done) {
-                car.reset(road.startPoint.x, road.startPoint.y);
+                console.log('Car done - resetting. Reason: reached goal or hit blockage');
+                generation++;
+                updateUI();
+                // Add a longer delay before resetting to make the result visible
+                setTimeout(() => {
+                    car.reset(road.startPoint.x, road.startPoint.y);
+                    console.log('Car reset to:', car.x, car.y);
+                }, 1000); // Increased from 100ms to 1000ms (1 second)
             }
         }
         
         // Draw car
+        console.log('About to draw car at position:', car.x, car.y);
         car.draw(ctx);
+        console.log('Finished drawing car');
     }
+    
+    // Final safeguard: Always draw car if it exists (at the very end)
+    // if (car) {
+    //     car.draw(ctx);
+    // }
+    
+    // Test: Draw a small green rectangle to verify canvas is working
+    ctx.fillStyle = '#00ff00';
+    ctx.fillRect(canvas.width - 20, 10, 10, 10);
     
     // Continue game loop
     requestAnimationFrame(gameLoop);

@@ -1,20 +1,14 @@
 class Road {
     constructor() {
-        // Road boundaries (left and right)
-        this.leftBoundary = [];
-        this.rightBoundary = [];
+        // Blockage lines that can be placed anywhere
+        this.blockageLines = [];
         this.startPoint = null;
         this.endPoint = null;
     }
 
-    // Add a point to the left boundary
-    addLeftPoint(x, y) {
-        this.leftBoundary.push({x, y});
-    }
-
-    // Add a point to the right boundary
-    addRightPoint(x, y) {
-        this.rightBoundary.push({x, y});
+    // Add a blockage line
+    addBlockageLine(x1, y1, x2, y2) {
+        this.blockageLines.push({x1, y1, x2, y2});
     }
 
     // Set the start point
@@ -29,29 +23,16 @@ class Road {
 
     // Draw the road on the canvas
     draw(ctx) {
-        // Draw boundaries
-        ctx.strokeStyle = '#34495e';
-        ctx.lineWidth = 2;
+        // Draw blockage lines
+        ctx.strokeStyle = '#e74c3c'; // Red color for blockage lines
+        ctx.lineWidth = 3;
 
-        // Draw left boundary
-        if (this.leftBoundary.length > 1) {
+        this.blockageLines.forEach(line => {
             ctx.beginPath();
-            ctx.moveTo(this.leftBoundary[0].x, this.leftBoundary[0].y);
-            for (let i = 1; i < this.leftBoundary.length; i++) {
-                ctx.lineTo(this.leftBoundary[i].x, this.leftBoundary[i].y);
-            }
+            ctx.moveTo(line.x1, line.y1);
+            ctx.lineTo(line.x2, line.y2);
             ctx.stroke();
-        }
-
-        // Draw right boundary
-        if (this.rightBoundary.length > 1) {
-            ctx.beginPath();
-            ctx.moveTo(this.rightBoundary[0].x, this.rightBoundary[0].y);
-            for (let i = 1; i < this.rightBoundary.length; i++) {
-                ctx.lineTo(this.rightBoundary[i].x, this.rightBoundary[i].y);
-            }
-            ctx.stroke();
-        }
+        });
 
         // Draw start point
         if (this.startPoint) {
@@ -70,8 +51,8 @@ class Road {
         }
     }
 
-    // Get distance to boundary from a point in a given direction
-    getDistanceToBoundary(x, y, angle) {
+    // Get distance to blockage from a point in a given direction
+    getDistanceToBlockage(x, y, angle) {
         const maxDistance = 200;
         const step = 1;
         let distance = 0;
@@ -80,7 +61,7 @@ class Road {
             const checkX = x + Math.cos(angle) * distance;
             const checkY = y + Math.sin(angle) * distance;
 
-            if (this.isPointOutsideRoad(checkX, checkY)) {
+            if (this.isPointOnBlockage(checkX, checkY)) {
                 return distance;
             }
 
@@ -90,26 +71,13 @@ class Road {
         return maxDistance;
     }
 
-    // Check if a point is outside the road boundaries
-    isPointOutsideRoad(x, y) {
-        // Check if point is outside the road boundaries
-        // This is a simplified version - you might want to implement a more accurate check
+    // Check if a point is on or near a blockage line
+    isPointOnBlockage(x, y) {
         const margin = 5; // Margin for collision detection
 
-        // Check distance to left boundary
-        for (let i = 0; i < this.leftBoundary.length - 1; i++) {
-            const p1 = this.leftBoundary[i];
-            const p2 = this.leftBoundary[i + 1];
-            if (this.distanceToLine(x, y, p1.x, p1.y, p2.x, p2.y) < margin) {
-                return true;
-            }
-        }
-
-        // Check distance to right boundary
-        for (let i = 0; i < this.rightBoundary.length - 1; i++) {
-            const p1 = this.rightBoundary[i];
-            const p2 = this.rightBoundary[i + 1];
-            if (this.distanceToLine(x, y, p1.x, p1.y, p2.x, p2.y) < margin) {
+        for (let i = 0; i < this.blockageLines.length; i++) {
+            const line = this.blockageLines[i];
+            if (this.distanceToLine(x, y, line.x1, line.y1, line.x2, line.y2) < margin) {
                 return true;
             }
         }
@@ -153,8 +121,7 @@ class Road {
 
     // Clear all road data
     clear() {
-        this.leftBoundary = [];
-        this.rightBoundary = [];
+        this.blockageLines = [];
         this.startPoint = null;
         this.endPoint = null;
     }
